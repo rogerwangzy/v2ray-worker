@@ -3,6 +3,7 @@ name: Deploy to Cloudflare Workers
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,23 +17,18 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'  # 加缓存，加速安装
 
-    - name: Install latest Wrangler
-      run: |
-        npm install -g @cloudflare/wrangler@latest
-        npm link @cloudflare/wrangler  # 强制链接，确保可用
-        echo "NODE_PATH=$(npm root -g)" >> $GITHUB_ENV  # 更新PATH
-        echo "$(npm bin -g)" >> $GITHUB_PATH  # 加全局bin到PATH
+    - name: Install Wrangler
+      run: npm install -g wrangler@latest
 
-    - name: Verify Wrangler installation
-      run: wrangler --version  # 检查版本
+    - name: Verify Wrangler
+      run: wrangler --version
 
-    - name: Replace KV_NAME in wrangler.toml
+    - name: Replace KV_NAME
       run: sed -i "s/KV_NAME/${{ secrets.KV_NAME }}/g" wrangler.toml
 
-    - name: Deploy to Cloudflare
-      run: wrangler deploy --api-token ${{ secrets.CF_API_TOKEN }} --account-id ${{ secrets.CF_ACCOUNT_ID }}
+    - name: Deploy
+      run: wrangler deploy
       env:
-        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

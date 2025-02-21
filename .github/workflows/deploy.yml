@@ -2,29 +2,37 @@ name: Deploy to Cloudflare Workers
 
 on:
   push:
-    branches: [ main ]  # 触发条件，推送到main分支时运行
+    branches: [ main ]
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # 用Ubuntu环境
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4  # 拉取代码
+      uses: actions/checkout@v4
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'  # 用Node 20，Wrangler跑得稳
+        node-version: '20'
+        cache: 'npm'  # 加缓存，加速安装
 
-    - name: Install Wrangler
-      run: npm install -g @cloudflare/wrangler  # 全局装Wrangler
+    - name: Install latest Wrangler
+      run: |
+        npm install -g @cloudflare/wrangler@latest
+        npm link @cloudflare/wrangler  # 强制链接，确保可用
+        echo "NODE_PATH=$(npm root -g)" >> $GITHUB_ENV  # 更新PATH
+        echo "$(npm bin -g)" >> $GITHUB_PATH  # 加全局bin到PATH
+
+    - name: Verify Wrangler installation
+      run: wrangler --version  # 检查版本
 
     - name: Replace KV_NAME in wrangler.toml
-      run: sed -i "s/KV_NAME/${{ secrets.KV_NAME }}/g" wrangler.toml  # 替换KV_NAME
+      run: sed -i "s/KV_NAME/${{ secrets.KV_NAME }}/g" wrangler.toml
 
     - name: Deploy to Cloudflare
       run: wrangler deploy --api-token ${{ secrets.CF_API_TOKEN }} --account-id ${{ secrets.CF_ACCOUNT_ID }}
       env:
-        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}  # API Token
-        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}  # Account ID
+        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
